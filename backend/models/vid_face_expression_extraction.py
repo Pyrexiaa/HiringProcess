@@ -1,34 +1,67 @@
+# python vid_face_expression_extraction.py
+
 import cv2
+from deepface import DeepFace
 
-# Open the video file
-# video_path = 'path/to/video/file.mp4'
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture('/Users/gohyixian/Desktop/test.mov')
 
-# Check if the video file was opened successfully
 if not cap.isOpened():
     print("Error opening video file")
     exit()
 
-# Variables for frame extraction
 frame_counter = 0
-frame_interval = 24  # Select every 10th frame
+frame_interval = 15  # Select every 10th frame
+
+count = 0
+emots= [0,0,0,0,0,0,0]
+desc = ['sad', 'angry', 'surprise', 'fear', 'happy', 'disgust', 'neutral']
 
 while True:
-    # Read the next frame from the video
     ret, frame = cap.read()
 
-    # Break the loop if no more frames are available
+    # no more frames available
     if not ret:
         break
 
-    # Check if the current frame should be selected
     if frame_counter % frame_interval == 0:
-        # Convert the frame to PNG
-        output_path = f'frame_{frame_counter}.png'
-        cv2.imwrite(output_path, frame)
-        print(f"Saved frame {frame_counter} as {output_path}")
+        bgr_array = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        
+        frame_result = DeepFace.analyze(img_path = bgr_array, actions = ["emotion"], enforce_detection=False)
+
+        if len(frame_result) > 0:
+            emot = frame_result[0]['emotion']
+            emots[0] += emot['sad']
+            emots[1] += emot['angry']
+            emots[2] += emot['surprise']
+            emots[3] += emot['fear']
+            emots[4] += emot['happy']
+            emots[5] += emot['disgust']
+            emots[6] += emot['neutral']
+            count += 1
 
     frame_counter += 1
+    
+for i in range(len(emots)):
+    emots[i] /= (count*100)
 
-# Release the video file
+maxidx=-1
+for i in range(len(emots)):
+    if i > emots[maxidx]:
+        maxidx = i
+        
 cap.release()
+
+print("Sad      :", emots[0])
+print("Angry    :", emots[1])
+print("Surprise :", emots[2])
+print("Fear     :", emots[3])
+print("Happy    :", emots[4])
+print("Disgust  :", emots[5])
+print("Neutral  :", emots[6])
+print("Dominant :", desc[maxidx])
+
+
+
+
+
+
