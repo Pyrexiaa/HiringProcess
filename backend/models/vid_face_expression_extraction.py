@@ -3,62 +3,64 @@
 import cv2
 from deepface import DeepFace
 
-cap = cv2.VideoCapture('/Users/gohyixian/Desktop/test.mov')
 
-if not cap.isOpened():
-    print("Error opening video file")
-    exit()
+def extract_expression(path: str, frame_interval: int = 15) -> dict:
+    cap = cv2.VideoCapture(path)
+    if not cap.isOpened():
+        print("Error opening video file")
+        return None
 
-frame_counter = 0
-frame_interval = 15  # Select every 10th frame
+    frame_counter = 0
 
-count = 0
-emots= [0,0,0,0,0,0,0]
-desc = ['sad', 'angry', 'surprise', 'fear', 'happy', 'disgust', 'neutral']
+    count = 0
+    emots = {'sad':0, 'angry':0, 'surprise':0, 'fear':0, 'happy':0, 'disgust':0, 'neutral':0}
 
-while True:
-    ret, frame = cap.read()
+    while True:
+        ret, frame = cap.read()
 
-    # no more frames available
-    if not ret:
-        break
+        # no more frames available
+        if not ret:
+            break
 
-    if frame_counter % frame_interval == 0:
-        bgr_array = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        if frame_counter % frame_interval == 0:
+            bgr_array = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            
+            frame_result = DeepFace.analyze(img_path = bgr_array, actions = ["emotion"], enforce_detection=False)
+
+            if len(frame_result) > 0:
+                emot = frame_result[0]['emotion']
+                emots['sad'] = emots.get('sad', 0) + emot['sad']
+                emots['angry'] = emots.get('angry', 0) + emot['angry']
+                emots['surprise'] = emots.get('surprise', 0) + emot['surprise']
+                emots['fear'] = emots.get('fear', 0) + emot['fear']
+                emots['happy'] = emots.get('happy', 0) + emot['happy']
+                emots['disgust'] = emots.get('disgust', 0) + emot['disgust']
+                emots['neutral'] = emots.get('neutral', 0) + emot['neutral']
+                count += 1
+
+        frame_counter += 1
         
-        frame_result = DeepFace.analyze(img_path = bgr_array, actions = ["emotion"], enforce_detection=False)
-
-        if len(frame_result) > 0:
-            emot = frame_result[0]['emotion']
-            emots[0] += emot['sad']
-            emots[1] += emot['angry']
-            emots[2] += emot['surprise']
-            emots[3] += emot['fear']
-            emots[4] += emot['happy']
-            emots[5] += emot['disgust']
-            emots[6] += emot['neutral']
-            count += 1
-
-    frame_counter += 1
+    # zero division
+    if count == 0: count = 1
     
-for i in range(len(emots)):
-    emots[i] /= (count*100)
+    for i in list(emots.keys()):
+        emots[i] /= (count*100)
 
-maxidx=-1
-for i in range(len(emots)):
-    if i > emots[maxidx]:
-        maxidx = i
-        
-cap.release()
+    dominant = 'sad'
+    for i in list(emots.keys()):
+        if emots[i] > emots[dominant]:
+            dominant = i
+    
+    emots["dominant"] = dominant
+    cap.release()
+    return emots
 
-print("Sad      :", emots[0])
-print("Angry    :", emots[1])
-print("Surprise :", emots[2])
-print("Fear     :", emots[3])
-print("Happy    :", emots[4])
-print("Disgust  :", emots[5])
-print("Neutral  :", emots[6])
-print("Dominant :", desc[maxidx])
+
+
+if __name__ == '__main__':
+    result = extract_expression('/Users/gohyixian/Desktop/test.mov')
+    for k,v in result.items():
+        print(k, ":", v)
 
 
 
