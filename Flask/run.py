@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify, redirect, session, u
 from model import train_model
 from sklearn.pipeline import Pipeline
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer, TfidfTransformer
+from flask_cors import CORS, cross_origin
 import spacy
 import pickle
 import joblib
@@ -10,6 +11,7 @@ from text_summarizer import summarize_text
 from vid_face_expression_extraction import extract_expression
 
 app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": ["http://localhost:3000", "*"]}})
 
 filename = 'trained_model.pkl'
 model = pickle.load(open(filename, 'rb'))
@@ -52,15 +54,22 @@ def summarize():
     summarization_data = request.form.get('summarization')
     summarization_input = [summarization_data]
     summarization = summarize_text(summarization_input)
-    return jsonify(summarization)
+    return jsonify(summary=summarization)
 
 # Add methods=["POST"] and request.form.get('video)
-@app.route('/facial')
+@app.route('/facial', methods=["POST"])
 def facial():
-    # facial_input = request.form.get('video')
-    facial_input = 'C:/Users/asus/Pictures/Camera Roll/video1.MOV'
+    facial_input = request.form.get('video')
+    # facial_input = 'C:/Users/asus/Pictures/Camera Roll/video1.MOV'
     facial_result = extract_expression(facial_input)
-    return jsonify(facial_result)
+    return jsonify(confidence=facial_result)
+
+@app.route('/personality')
+def personality():
+    personality_data = request.form.get('personality')
+    personality_input = [personality_data]
+    # personality = something()
+    return jsonify("personality")
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0')
